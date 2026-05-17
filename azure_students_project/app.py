@@ -1,6 +1,9 @@
 from flask import Flask, render_template, request, redirect
+from dotenv import load_dotenv
 import pyodbc
 import os
+
+load_dotenv()
 
 app = Flask(__name__)
 
@@ -9,7 +12,7 @@ server = os.getenv("SQL_SERVER")
 database = os.getenv("SQL_DATABASE")
 username = os.getenv("SQL_USERNAME")
 password = os.getenv("SQL_PASSWORD")
-driver = "{ODBC Driver 17 for SQL Server}"
+driver = "{ODBC Driver 18 for SQL Server}"
 
 connection_string = f"DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}"
 conn = pyodbc.connect(connection_string)
