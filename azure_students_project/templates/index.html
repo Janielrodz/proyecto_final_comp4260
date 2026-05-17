@@ -24,16 +24,25 @@
 </head>
 <body class="d-flex justify-content-center align-items-center">
     <div class="container mt-5 col-md-6">
-        <h1 class="text-center mb-4">📝 Gestor de Tareas</h1>
+        <h1 class="text-center mb-4">Gestor de Tareas</h1>
         <div class="card p-4">
-            <form action="/add" method="post" class="input-group mb-3">
-                <input type="text" name="title" class="form-control" placeholder="Nueva tarea" required>
-                <button class="btn btn-success">Agregar</button>
+            <form action="/add" method="post" enctype="multipart/form-data" class="mb-3">
+                <div class="input-group mb-2">
+                    <input type="text" name="title" class="form-control" placeholder="Nueva tarea" required>
+                    <button class="btn btn-success">Agregar</button>
+                </div>
+                <input type="file" name="file" class="form-control">
             </form>
             <ul class="list-group">
                 {% for task in tasks %}
                 <li class="list-group-item d-flex justify-content-between align-items-center {% if task.done %}done{% endif %}">
-                    {{ task.title }}
+                    <div>
+                        {{ task.title }}
+                        {% if task.file_url %}
+                        <br>
+                        <a href="{{ task.file_url }}" target="_blank" class="btn btn-sm btn-light mt-1">📎 Ver archivo</a>
+                        {% endif %}
+                    </div>
                     <div>
                         {% if not task.done %}
                         <a href="/done/{{ task.id }}" class="btn btn-sm btn-primary">Hecho</a>
