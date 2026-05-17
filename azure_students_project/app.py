@@ -21,21 +21,28 @@ driver = "{ODBC Driver 18 for SQL Server}"
 storage_connection_string = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
 container_name = "task-files"
 
-connection_string = f"DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}"
-conn = pyodbc.connect(connection_string)
-cursor = conn.cursor()
+def get_connection():
+    connection_string = f"DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}"
+    return pyodbc.connect(connection_string)
 
-# Crear tabla si no existe (una sola vez)
-cursor.execute("""
-    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='tasks' AND xtype='U')
-    CREATE TABLE tasks (
-        id INT PRIMARY KEY IDENTITY(1,1),
-        title NVARCHAR(100),
-        done BIT,
-        file_url NVARCHAR(500)
-    )
-""")
-conn.commit()
+# Crear tabla si no existe (una sola vez al arrancar)
+def init_db():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='tasks' AND xtype='U')
+        CREATE TABLE tasks (
+            id INT PRIMARY KEY IDENTITY(1,1),
+            title NVARCHAR(100),
+            done BIT,
+            file_url NVARCHAR(500)
+        )
+    """)
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+init_db()
 
 def generate_sas_url(blob_name):
     blob_service = BlobServiceClient.from_connection_string(storage_connection_string)
@@ -54,8 +61,13 @@ def generate_sas_url(blob_name):
 
 @app.route("/")
 def index():
+    conn = get_connection()
+    cursor = conn.cursor()
     cursor.execute("SELECT * FROM tasks")
     tasks = cursor.fetchall()
+    cursor.close()
+    conn.close()
+
     tasks_with_sas = []
     for task in tasks:
         file_sas_url = generate_sas_url(task.file_url.split("/")[-1]) if task.file_url else None
@@ -81,20 +93,32 @@ def add_task():
         file_url = blob_client.url
 
     if title:
+        conn = get_connection()
+        cursor = conn.cursor()
         cursor.execute("INSERT INTO tasks (title, done, file_url) VALUES (?, ?, ?)", (title, 0, file_url))
         conn.commit()
+        cursor.close()
+        conn.close()
     return redirect("/")
 
 @app.route("/done/<int:task_id>")
 def mark_done(task_id):
+    conn = get_connection()
+    cursor = conn.cursor()
     cursor.execute("UPDATE tasks SET done = 1 WHERE id = ?", (task_id,))
     conn.commit()
+    cursor.close()
+    conn.close()
     return redirect("/")
 
 @app.route("/delete/<int:task_id>")
 def delete_task(task_id):
+    conn = get_connection()
+    cursor = conn.cursor()
     cursor.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
     conn.commit()
+    cursor.close()
+    conn.close()
     return redirect("/")
 
 if __name__ == "__main__":
